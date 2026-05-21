@@ -23,7 +23,7 @@ export function AppHeader() {
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-4 sm:px-6">
         <Link to="/" className="flex items-center gap-2">
           <div className="grid h-9 w-9 place-items-center rounded-xl bg-ink text-paper">
-            <Flame className="h-4 w-4" />
+            <p className="h-4 w-4">W</p>
           </div>
           <div className="hidden leading-none sm:block">
             <p className="font-display text-lg font-semibold tracking-tight">Fitmatch</p>
