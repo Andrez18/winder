@@ -72,6 +72,16 @@ export function AppHeader() {
               <UserCircle className="h-3.5 w-3.5" /> Mi perfil
             </Link>
 
+            {/* Móvil: solo ícono */}
+            <button
+              onClick={handleLogout}
+              className="grid h-9 w-9 place-items-center rounded-full border border-border bg-card text-muted-foreground hover:text-ink sm:hidden"
+              aria-label="Cerrar sesión"
+            >
+              <LogOut className="h-4 w-4" />
+            </button>
+
+            {/* Desktop: ícono + texto */}
             <button
               onClick={handleLogout}
               className="hidden items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1.5 text-xs text-muted-foreground hover:text-ink sm:inline-flex"
