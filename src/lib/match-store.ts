@@ -19,7 +19,8 @@
  */
 import { useEffect, useState, useCallback } from "react";
 import { supabase } from "./supabase";
-import { profiles, type Profile } from "./profiles";
+import { demoProfiles, type Profile } from "./profiles";
+import type { FashionProfileRow } from "./user-profile";
 
 /** Agrega un like al perfil. Fire-and-forget desde la UI. */
 export async function addMatch(profileId: string) {
@@ -49,6 +50,7 @@ export function useMatches(): Profile[] {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) { setMatchedProfiles([]); return; }
 
+    // 1. Obtener todos los profile_ids likeados por el usuario
     const { data: rows, error } = await supabase
       .from("user_likes")
       .select("profile_id")
@@ -58,11 +60,62 @@ export function useMatches(): Profile[] {
     if (error || !rows) { setMatchedProfiles([]); return; }
 
     const likedIds = rows.map((r) => r.profile_id as string);
-    const matched = likedIds
-      .map((id) => profiles.find((p) => p.id === id))
+    if (likedIds.length === 0) { setMatchedProfiles([]); return; }
+
+    // 2. Separar IDs demo vs IDs reales (UUIDs de fashion_profiles)
+    const demoIds = likedIds.filter((id) => id.startsWith("demo-"));
+    const realIds = likedIds.filter((id) => !id.startsWith("demo-"));
+
+    // 3. Resolver perfiles demo desde el array local
+    const demoMatches = demoIds
+      .map((id) => demoProfiles.find((p) => p.id === id))
       .filter((p): p is Profile => Boolean(p));
 
-    setMatchedProfiles(matched);
+    // 4. Resolver perfiles reales desde fashion_profiles en Supabase
+    let realMatches: Profile[] = [];
+    if (realIds.length > 0) {
+      const { data: realRows } = await supabase
+        .from("fashion_profiles")
+        .select("*")
+        .in("id", realIds);
+
+      if (realRows) {
+        // Conservar el orden original (por liked_at)
+        const rowMap = new Map(
+          (realRows as FashionProfileRow[]).map((r) => [r.id, r])
+        );
+        realMatches = realIds
+          .map((id) => {
+            const row = rowMap.get(id);
+            if (!row) return null;
+            return {
+              id: row.id,
+              userId: row.user_id,
+              name: row.name,
+              age: row.age,
+              city: row.city,
+              photo: row.photo_url
+                ?? `https://api.dicebear.com/8.x/initials/svg?seed=${encodeURIComponent(row.name)}`,
+              style: row.style,
+              bio: row.bio,
+              tags: row.tags ?? [],
+              brands: row.brands ?? [],
+              signature: row.signature,
+              isDemo: false,
+            } as Profile;
+          })
+          .filter((p): p is Profile => Boolean(p));
+      }
+    }
+
+    // 5. Combinar respetando el orden por liked_at
+    const ordered = likedIds
+      .map((id) =>
+        [...demoMatches, ...realMatches].find((p) => p.id === id)
+      )
+      .filter((p): p is Profile => Boolean(p));
+
+    setMatchedProfiles(ordered);
   }, []);
 
   useEffect(() => {
